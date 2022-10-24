@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.10)
 
 set(UNWINDSTACK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
-target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT})
-target_include_directories(unwindstack PUBLIC ${UNWINDSTACK_ROOT}/include)
-
 set(ANDROID_SOURCES
     ${UNWINDSTACK_ROOT}/android-base/errno_restorer.h
     ${UNWINDSTACK_ROOT}/android-base/file.cpp
@@ -97,6 +94,9 @@ add_library(unwindstack STATIC
     ${UNWINDSTACK_SOURCES_GETREG}
 )
 target_link_libraries(unwindstack log)
+target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT})
+target_include_directories(unwindstack PUBLIC ${UNWINDSTACK_ROOT}/include)
+
 set_property(TARGET unwindstack PROPERTY CXX_STANDARD 17)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
