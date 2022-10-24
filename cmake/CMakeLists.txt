@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 
 set(UNWINDSTACK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
-include_directories(${UNWINDSTACK_ROOT} ${UNWINDSTACK_ROOT}/include)
+target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT})
+target_include_directories(unwindstack PUBLIC ${UNWINDSTACK_ROOT}/include)
 
 set(ANDROID_SOURCES
     ${UNWINDSTACK_ROOT}/android-base/errno_restorer.h
