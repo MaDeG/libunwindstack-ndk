@@ -24,6 +24,14 @@ FetchContent_Declare(libdexfile-ndk
 FetchContent_MakeAvailable(libdexfile-ndk)
 FetchContent_GetProperties(libdexfile-ndk)
 
+FetchContent_Declare(lzma-ndk
+                     GIT_REPOSITORY git@github.com:MaDeG/lzma-ndk.git
+                     GIT_TAG master
+                     GIT_SUBMODULES ""
+                     SOURCE_SUBDIR cmake)
+FetchContent_MakeAvailable(lzma-ndk)
+FetchContent_GetProperties(lzma-ndk)
+
 set(UNWINDSTACK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 set(ANDROID_SOURCES ${UNWINDSTACK_ROOT}/android-base/errno_restorer.h
@@ -84,6 +92,7 @@ set(UNWINDSTACK_SOURCES ${UNWINDSTACK_ROOT}/AndroidUnwinder.cpp
                         ${UNWINDSTACK_ROOT}/MemoryOfflineBuffer.h
                         ${UNWINDSTACK_ROOT}/MemoryRange.h
                         ${UNWINDSTACK_ROOT}/MemoryRemote.h
+                        ${UNWINDSTACK_ROOT}/MemoryXz.cpp
                         ${UNWINDSTACK_ROOT}/Regs.cpp
                         ${UNWINDSTACK_ROOT}/RegsArm.cpp
                         ${UNWINDSTACK_ROOT}/RegsArm64.cpp
@@ -110,7 +119,10 @@ endif()
 
 add_library(unwindstack STATIC ${ANDROID_SOURCES} ${UNWINDSTACK_SOURCES} ${UNWINDSTACK_SOURCES_GETREG})
 target_link_libraries(unwindstack log)
-target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT} ${libdexfile-ndk_SOURCE_DIR}/external/include)
+target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT}
+                                               ${libdexfile-ndk_SOURCE_DIR}/external/include
+                                               ${lzma-ndk_SOURCE_DIR}/C
+)
 target_include_directories(unwindstack PUBLIC ${UNWINDSTACK_ROOT}/include)
 add_compile_definitions(WITH_DEBUG_FRAME DEXFILE_SUPPORT)
 
