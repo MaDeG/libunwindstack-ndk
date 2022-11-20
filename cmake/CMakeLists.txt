@@ -4,9 +4,13 @@ endif (POLICY CMP0048)
 
 cmake_minimum_required(VERSION 3.10)
 
-project(ConanWrapper VERSION 1.0.0 LANGUAGES C)
-
 set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# Require out-of-source builds
+file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
+if(EXISTS "${LOC_PATH}")
+    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
+endif()
 
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -16,63 +20,120 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+project(unwindstack LANGUAGES CXX ASM)
+
+include(FetchContent)
+
+FetchContent_Declare(libdexfile-ndk
+                     GIT_REPOSITORY git@github.com:MaDeG/libdexfile-ndk.git
+                     GIT_TAG master
+                     GIT_SUBMODULES ""
+                     SOURCE_SUBDIR cmake)
+FetchContent_MakeAvailable(libdexfile-ndk)
+FetchContent_GetProperties(libdexfile-ndk)
+
+FetchContent_Declare(lzma-ndk
+                     GIT_REPOSITORY git@github.com:MaDeG/lzma-ndk.git
+                     GIT_TAG master
+                     GIT_SUBMODULES ""
+                     SOURCE_SUBDIR cmake)
+FetchContent_MakeAvailable(lzma-ndk)
+FetchContent_GetProperties(lzma-ndk)
+
 set(UNWINDSTACK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
-# Require out-of-source builds
-file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
-if(EXISTS "${LOC_PATH}")
-    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
+set(ANDROID_SOURCES ${UNWINDSTACK_ROOT}/android-base/errno_restorer.h
+                    ${UNWINDSTACK_ROOT}/android-base/file.cpp
+                    ${UNWINDSTACK_ROOT}/android-base/file.h
+                    ${UNWINDSTACK_ROOT}/android-base/log_main.h
+                    ${UNWINDSTACK_ROOT}/android-base/logging.h
+                    ${UNWINDSTACK_ROOT}/android-base/macros.h
+                    ${UNWINDSTACK_ROOT}/android-base/off64_t.h
+                    ${UNWINDSTACK_ROOT}/android-base/parseint.h
+                    ${UNWINDSTACK_ROOT}/android-base/stringprintf.cpp
+                    ${UNWINDSTACK_ROOT}/android-base/stringprintf.h
+                    ${UNWINDSTACK_ROOT}/android-base/strings.cpp
+                    ${UNWINDSTACK_ROOT}/android-base/strings.h
+                    ${UNWINDSTACK_ROOT}/android-base/threads.h
+                    ${UNWINDSTACK_ROOT}/android-base/unique_fd.h
+                    ${UNWINDSTACK_ROOT}/android-base/utf8.h
+                    ${UNWINDSTACK_ROOT}/procinfo/process_map.h
+                    ${UNWINDSTACK_ROOT}/procinfo/process.h
+)
+
+set(UNWINDSTACK_SOURCES ${UNWINDSTACK_ROOT}/AndroidUnwinder.cpp
+                        ${UNWINDSTACK_ROOT}/ArmExidx.cpp
+                        ${UNWINDSTACK_ROOT}/ArmExidx.h
+                        ${UNWINDSTACK_ROOT}/Check.h
+                        ${UNWINDSTACK_ROOT}/DexFile.cpp
+                        ${UNWINDSTACK_ROOT}/DexFile.h
+                        ${UNWINDSTACK_ROOT}/DexFiles.cpp
+                        ${UNWINDSTACK_ROOT}/DwarfCfa.cpp
+                        ${UNWINDSTACK_ROOT}/DwarfCfa.h
+                        ${UNWINDSTACK_ROOT}/DwarfDebugFrame.h
+                        ${UNWINDSTACK_ROOT}/DwarfEhFrame.h
+                        ${UNWINDSTACK_ROOT}/DwarfEhFrameWithHdr.cpp
+                        ${UNWINDSTACK_ROOT}/DwarfEhFrameWithHdr.h
+                        ${UNWINDSTACK_ROOT}/DwarfEncoding.h
+                        ${UNWINDSTACK_ROOT}/DwarfMemory.cpp
+                        ${UNWINDSTACK_ROOT}/DwarfOp.cpp
+                        ${UNWINDSTACK_ROOT}/DwarfOp.h
+                        ${UNWINDSTACK_ROOT}/DwarfSection.cpp
+                        ${UNWINDSTACK_ROOT}/Elf.cpp
+                        ${UNWINDSTACK_ROOT}/ElfInterface.cpp
+                        ${UNWINDSTACK_ROOT}/ElfInterfaceArm.cpp
+                        ${UNWINDSTACK_ROOT}/ElfInterfaceArm.h
+                        ${UNWINDSTACK_ROOT}/Global.cpp
+                        ${UNWINDSTACK_ROOT}/JitDebug.cpp
+                        ${UNWINDSTACK_ROOT}/GlobalDebugImpl.h
+                        ${UNWINDSTACK_ROOT}/LogAndroid.cpp
+                        #${UNWINDSTACK_ROOT}/LogStdout.cpp
+                        ${UNWINDSTACK_ROOT}/MapInfo.cpp
+                        ${UNWINDSTACK_ROOT}/Maps.cpp
+                        ${UNWINDSTACK_ROOT}/Memory.cpp
+                        ${UNWINDSTACK_ROOT}/MemoryBuffer.h
+                        ${UNWINDSTACK_ROOT}/MemoryCache.h
+                        ${UNWINDSTACK_ROOT}/MemoryFileAtOffset.h
+                        ${UNWINDSTACK_ROOT}/MemoryLocal.h
+                        ${UNWINDSTACK_ROOT}/MemoryMte.cpp
+                        ${UNWINDSTACK_ROOT}/MemoryOffline.h
+                        ${UNWINDSTACK_ROOT}/MemoryOfflineBuffer.h
+                        ${UNWINDSTACK_ROOT}/MemoryRange.h
+                        ${UNWINDSTACK_ROOT}/MemoryRemote.h
+                        ${UNWINDSTACK_ROOT}/MemoryXz.cpp
+                        ${UNWINDSTACK_ROOT}/Regs.cpp
+                        ${UNWINDSTACK_ROOT}/RegsArm.cpp
+                        ${UNWINDSTACK_ROOT}/RegsArm64.cpp
+                        ${UNWINDSTACK_ROOT}/RegsInfo.h
+                        ${UNWINDSTACK_ROOT}/RegsX86_64.cpp
+                        ${UNWINDSTACK_ROOT}/RegsX86.cpp
+                        ${UNWINDSTACK_ROOT}/Symbols.cpp
+                        ${UNWINDSTACK_ROOT}/Symbols.h
+                        ${UNWINDSTACK_ROOT}/ThreadEntry.cpp
+                        ${UNWINDSTACK_ROOT}/ThreadEntry.h
+                        ${UNWINDSTACK_ROOT}/ThreadUnwinder.cpp
+                        ${UNWINDSTACK_ROOT}/unistdfix.h
+                        ${UNWINDSTACK_ROOT}/Unwinder.cpp
+)
+
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "amd64.*|x86_64.*|AMD64.*")
+    set(UNWINDSTACK_SOURCES_GETREG ${UNWINDSTACK_ROOT}/AsmGetRegsX86_64.S)
+elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "i686.*|i386.*|x86.*")
+    set(UNWINDSTACK_SOURCES_GETREG ${UNWINDSTACK_ROOT}/AsmGetRegsX86.S)
 endif()
 
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-    message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-    file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/0.18.1/conan.cmake"
-            "${CMAKE_BINARY_DIR}/conan.cmake"
-            TLS_VERIFY ON)
+add_library(unwindstack STATIC ${ANDROID_SOURCES} ${UNWINDSTACK_SOURCES} ${UNWINDSTACK_SOURCES_GETREG})
+target_link_libraries(unwindstack log lzma dexfile)
+target_include_directories(unwindstack PRIVATE ${UNWINDSTACK_ROOT}
+                                               ${libdexfile-ndk_SOURCE_DIR}/external/include
+                                               ${lzma-ndk_SOURCE_DIR}/C
+)
+target_include_directories(unwindstack PUBLIC ${UNWINDSTACK_ROOT}/include)
+target_compile_options(unwindstack PRIVATE -Wexit-time-destructors -fno-c++-static-destructors)
+add_compile_definitions(WITH_DEBUG_FRAME DEXFILE_SUPPORT)
+
+set_property(TARGET unwindstack PROPERTY CXX_STANDARD 17)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(unwindstack PRIVATE $<BUILD_INTERFACE:-Wno-unknown-attributes>)
 endif()
-include(${CMAKE_BINARY_DIR}/conan.cmake)
-
-conan_cmake_autodetect(settings)
-conan_cmake_install(PATH_OR_REFERENCE ${UNWINDSTACK_ROOT}/cmake
-                    PROFILE_HOST ${UNWINDSTACK_ROOT}/cmake/armv8.profile
-                    PROFILE_BUILD ${UNWINDSTACK_ROOT}/cmake/build.profile
-                    BUILD missing)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR})
-
-# Set conan environment variables generated using the virtualenv generator
-# This is necessary since for some reason Conan does not correctly set the variables found (e.g. the Android NDK compiler path)
-# A particular attention should be paid to the PATH variable since it is not good to completely overwrite it
-if(EXISTS "${CMAKE_BINARY_DIR}/environment.sh.env")
-    FILE(READ "${CMAKE_BINARY_DIR}/environment.sh.env" _contents)
-    STRING(REGEX REPLACE "\n" ";" _contents "${_contents}")
-    foreach(_line ${_contents})
-        string(REGEX MATCH "([^=]+)=\"(.*)\"" _match ${_line})
-        if(NOT "${_match}" STREQUAL "" AND NOT "${CMAKE_MATCH_1}" STREQUAL "PATH")
-            #message("in ${CMAKE_MATCH_1} = ${CMAKE_MATCH_2}")
-            set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
-        endif()
-    endforeach()
-    unset(_contents)
-    unset(_line)
-    unset(_match)
-else()
-    message(FATAL_ERROR "Android NDK environment variables not found!")
-endif()
-
-#set(CMAKE_C_COMPILER   $ENV{CC})
-#set(CMAKE_CXX_COMPILER $ENV{CXX})
-#set(CMAKE_CXX_COMPILER_AR $ENV{AR})
-#set(CMAKE_CXX_COMPILER_RANLIB $ENV{RANLIB})
-#set(CMAKE_AR           $ENV{AR})
-#set(CMAKE_AS           $ENV{AS})
-#set(CMAKE_RANLIB       $ENV{RANLIB})
-#set(CMAKE_STRIP        $ENV{STRIP})
-#set(CMAKE_ADDR2LINE    $ENV{ADDR2LINE})
-#set(CMAKE_NM           $ENV{NM})
-#set(CMAKE_OBJCOPY      $ENV{OBJCOPY})
-#set(CMAKE_OBJDUMP      $ENV{OBJDUMP})
-#set(CMAKE_READELF      $ENV{READELF})
-#set(CMAKE_LD           $ENV{LD})
-
-include(./CMakeListsProject.txt)
