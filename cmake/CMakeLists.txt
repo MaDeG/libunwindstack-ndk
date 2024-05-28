@@ -25,7 +25,7 @@ project(unwindstack LANGUAGES CXX ASM)
 include(FetchContent)
 
 FetchContent_Declare(libdexfile-ndk
-                     GIT_REPOSITORY git@github.com:MaDeG/libdexfile-ndk.git
+                     GIT_REPOSITORY https://github.com/MaDeG/libdexfile-ndk.git
                      GIT_TAG master
                      GIT_SUBMODULES ""
                      SOURCE_SUBDIR cmake)
@@ -33,7 +33,7 @@ FetchContent_MakeAvailable(libdexfile-ndk)
 FetchContent_GetProperties(libdexfile-ndk)
 
 FetchContent_Declare(lzma-ndk
-                     GIT_REPOSITORY git@github.com:MaDeG/lzma-ndk.git
+                     GIT_REPOSITORY https://github.com/MaDeG/lzma-ndk.git
                      GIT_TAG master
                      GIT_SUBMODULES ""
                      SOURCE_SUBDIR cmake)
